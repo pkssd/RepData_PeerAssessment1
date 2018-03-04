@@ -1,0 +1,124 @@
+---
+title: "RepData_PeerAssessment1"
+author: "Pradeept Sahoo"
+date: "March 3, 2018"
+output: html_document
+---
+
+# Reproducible Research : Peer Assignment 1
+
+## Loading and Processing the Data  
+To load the data I use the read.csv() command.
+1.Code for reading in the dataset and/or processing the data
+```{r loaddata}
+setwd("C:/Coursera/R/ReprodResearch")
+activityData <- read.csv("activity.csv")
+```
+
+To see what the data look like, I use the str(), summary(), and head() commands:  
+
+```{r checkdata}
+str(activityData)
+summary(activityData)
+head(activityData)
+```
+
+Modify the Date String to Date class and Remove the missing values and create a new data set. 
+
+
+```{r finalData}
+# change date type to date class 
+activityData$date <- as.Date(as.character(activityData$date))
+# create NA dataset
+activityDataNA <- is.na(activityData$steps)
+finalActivityData <- activityData[!activityDataNA,]
+head(finalActivityData)
+```
+
+Calculate the total number of steps taken per day
+```{r stepsPerDay}
+acivityByDaySum <- aggregate(finalActivityData$steps, by=list(finalActivityData$date),sum)
+names(acivityByDaySum)[1] = "date"
+names(acivityByDaySum)[2] = "totalsteps"
+head(acivityByDaySum,10)
+```
+
+2.Histogram of the total number of steps taken each day
+
+```{r stepsPerDayHistogram}
+# plot using ggplot
+library(ggplot2)
+ggplot(acivityByDaySum, aes(x=totalsteps)) +
+      geom_histogram(fill="steelblue",  bindwidth=1000) + 
+      labs(title="Total Daily Steps", x="Steps", y="Frequency")
+```
+
+3.Mean and median number of steps taken each day
+```{r tstepsMeanMedian}
+mean(acivityByDaySum$totalsteps)
+median(acivityByDaySum$totalsteps)
+```
+
+## Average daily activity pattern
+4.Time series plot of the 5 minutes interval and the average number of steps taken
+
+```{r timeSeries}
+# subset by interval
+meanDataByInterval <- aggregate(finalActivityData$steps, by=list(finalActivityData$interval), mean)
+# set the column names
+names(meanDataByInterval)[1]="interval"
+names(meanDataByInterval)[2]="steps"
+ggplot(meanDataByInterval, aes(x=interval, y=steps))+
+  labs(title = "Sum of the Steps by Interval", x="interval", y="steps")+
+  geom_line(color="red")
+
+```
+
+5.The 5-minute interval, on average across all the days that contains the maximum number of steps
+
+```{r maxSteps}
+maxIntervalSteps <- meanDataByInterval[which.max(meanDataByInterval$steps),]
+maxIntervalSteps
+```
+6.Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+
+```{r missingValues}
+missingValues <- sum(activityDataNA)
+missingValues
+```
+7. Make a histogram of the total number of steps taken each day after missing values are imputed
+
+```{r}
+# new dataset with NA values
+activityData2 <- activityData
+# Remove NA values
+cleanDataSet <- activityData2[!is.na(activityData2),]
+ 
+# Date wise sum data
+summedActivityByDay <- aggregate(cleanDataSet$steps, by = list(cleanDataSet$date),sum)
+names(summedActivityByDay)[1]="date"
+names(summedActivityByDay)[2]="totalsteps"
+## Create Histogram using ggplot2
+ggplot(summedActivityByDay, aes(x=totalsteps))+
+  geom_histogram(fill="steelblue", binwidth=1000) +
+  labs(title="Total Daily Steps", x="Steps", y= "Frequency")
+```
+8. Differences in activity patterns between weekdays and weekends. 
+```{r weekvsweekend}
+baseData2 <- cleanDataSet
+baseData2$weekday <- weekdays(baseData2$date)
+baseData2$weekend <- ifelse (baseData2$weekday == "Saturday" | baseData2$weekday == "Sunday", "Weekend", "Weekday")
+
+MeanDataWeekendWeekday <- aggregate(baseData2$steps, by=list(baseData2$weekend, baseData2$interval), mean)
+names(MeanDataWeekendWeekday)[1] ="weekend"
+names(MeanDataWeekendWeekday)[2] ="interval"
+names(MeanDataWeekendWeekday)[3] ="steps"
+#head(MeanDataWeekendWeekday,10)
+ggplot(MeanDataWeekendWeekday, aes(x = interval, y=steps, color=weekend)) +
+  geom_line() +
+  facet_grid(weekend ~ .) +
+  labs(title = "Mean of Steps by Interval", x = "interval", y = "steps")  
+    
+```
+
+There seems to be an overall slightly larger incidence of steps during the weekends.  
